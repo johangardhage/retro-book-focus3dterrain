@@ -600,3 +600,94 @@ void Terrain::GenerateTextureMap(unsigned int textureSize)
 
 	texture.SetID(tempID);
 }
+
+//
+// Load a grayscale RAW light map
+//
+bool Terrain::LoadLightMap(const char *filename, int mapSize)
+{
+	if (lightmap.data) {
+		UnloadLightMap();
+	}
+
+	FILE *file = fopen(filename, "rb");
+	if (file == NULL) {
+		printf("[ERROR] Terrain::LoadLightMap() Could not load %s\n", filename);
+		return false;
+	}
+
+	// Allocate memory and read the lightmap
+	lightmap.data = new unsigned char[mapSize * mapSize];
+	fread(lightmap.data, 1, mapSize * mapSize, file);
+	fclose(file);
+
+	lightmap.size = mapSize;
+	return true;
+}
+
+//
+// Unload the class's light map (if there is one)
+//
+bool Terrain::UnloadLightMap(void)
+{
+	if (lightmap.data) {
+		delete[] lightmap.data;
+		lightmap.data = NULL;
+		lightmap.size = 0;
+	}
+	return true;
+}
+
+//
+// Calculate lighting for the pre-set technique, storing it in a lightmap.
+// (Height-based lighting reads the height directly at render time, and a
+// loaded lightmap needs no calculation, so only slope lighting is computed.)
+//
+void Terrain::CalculateLighting(void)
+{
+	// A lightmap has already been provided, no need to create one
+	if (lightingType == LIGHTMAP) {
+		return;
+	}
+
+	// Allocate memory if it is needed
+	if (lightmap.size != size || lightmap.data == NULL) {
+		delete[] lightmap.data;
+		lightmap.data = new unsigned char[size * size];
+		lightmap.size = size;
+	}
+
+	// Loop through all vertices
+	for (int z = 0; z < size; z++) {
+		for (int x = 0; x < size; x++) {
+			// Height-based lighting is trivial
+			if (lightingType == HEIGHT_BASED) {
+				SetBrightnessAtPoint(x, z, GetTrueHeightAtPoint(x, z));
+			}
+
+			// Slope-lighting technique
+			else if (lightingType == SLOPE_LIGHT) {
+				float shade;
+
+				// Ensure we won't step over array boundaries
+				if (z >= directionZ && x >= directionX) {
+					shade = 1.0f - (GetTrueHeightAtPoint(x - directionX, z - directionZ) -
+						GetTrueHeightAtPoint(x, z)) / lightSoftness;
+				} else {
+					shade = 1.0f;
+				}
+
+				// Clamp the shading value to the min/max brightness boundaries
+				if (shade < minBrightness) {
+					shade = minBrightness;
+				}
+				if (shade > maxBrightness) {
+					shade = maxBrightness;
+				}
+
+				// Store the brightness in the lightmap
+				SetBrightnessAtPoint(x, z, (unsigned char)(shade * 255));
+			}
+		}
+	}
+}

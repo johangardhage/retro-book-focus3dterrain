@@ -29,7 +29,8 @@ void BruteForce::RenderStrips(bool grayscale, float texRepeat)
 				unsigned char color = GetTrueHeightAtPoint(x, z);
 				glColor3ub(color, color, color);
 			} else {
-				glColor3ub(255, 255, 255);
+				unsigned char shade = GetBrightnessAtPoint(x, z);
+				glColor3ub(shade * lightColor[0], shade * lightColor[1], shade * lightColor[2]);
 				EmitTexCoord(texLeft * texRepeat, texBottom * texRepeat);
 			}
 			glVertex3f((float)x, GetScaledHeightAtPoint(x, z), (float)z);
@@ -38,7 +39,8 @@ void BruteForce::RenderStrips(bool grayscale, float texRepeat)
 				unsigned char color = GetTrueHeightAtPoint(x, z + 1);
 				glColor3ub(color, color, color);
 			} else {
-				glColor3ub(255, 255, 255);
+				unsigned char shade = GetBrightnessAtPoint(x, z + 1);
+				glColor3ub(shade * lightColor[0], shade * lightColor[1], shade * lightColor[2]);
 				EmitTexCoord(texLeft * texRepeat, texTop * texRepeat);
 			}
 			glVertex3f((float)x, GetScaledHeightAtPoint(x, z + 1), (float)z + 1);

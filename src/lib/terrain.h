@@ -23,10 +23,24 @@ enum TileType
 	HIGHEST_TILE		// Tip of mountain
 };
 
+enum LightingType
+{
+	LIGHTING_NONE = 0,	// No lighting (full brightness)
+	HEIGHT_BASED,		// Brightness from the height value
+	LIGHTMAP,			// Brightness from a loaded lightmap
+	SLOPE_LIGHT			// Brightness computed from terrain slope
+};
+
 struct HeightData
 {
 	unsigned char *data;	// The height data
 	int size;				// The height size (must be a power of 2)
+};
+
+struct LightmapData
+{
+	unsigned char *data;	// The lightmap (brightness) data
+	int size;				// The lightmap size
 };
 
 struct TextureRegion
@@ -59,6 +73,14 @@ protected:
 	bool textureMapping;
 	bool detailMapping;
 	bool multitexturePass;	// True only while emitting the single ARB multitexture pass
+
+	// Lighting information
+	LightingType lightingType;
+	LightmapData lightmap;
+	float lightColor[3];
+	float minBrightness, maxBrightness;
+	float lightSoftness;
+	int directionX, directionZ;
 
 	int vertsPerFrame;		// Stat variables
 	int trisPerFrame;
@@ -117,6 +139,47 @@ public:
 	}
 	void DoMultitexturing(bool doIt) { multitexture = doIt; }
 
+	// Lighting
+	void SetLightingType(LightingType type) { lightingType = type; }
+	void SetLightColor(float r, float g, float b)
+	{
+		lightColor[0] = r;
+		lightColor[1] = g;
+		lightColor[2] = b;
+	}
+	float *GetLightColor(void) { return lightColor; }
+	void CustomizeSlopeLighting(int dirX, int dirZ, float minBright, float maxBright, float softness)
+	{
+		directionX = dirX;
+		directionZ = dirZ;
+		minBrightness = minBright;
+		maxBrightness = maxBright;
+		lightSoftness = softness;
+	}
+
+	bool LoadLightMap(const char *filename, int size);
+	bool UnloadLightMap(void);
+	void CalculateLighting(void);
+
+	void SetBrightnessAtPoint(int x, int z, unsigned char brightness)
+	{
+		lightmap.data[(z * lightmap.size) + x] = brightness;
+	}
+
+	// Brightness used by the renderer, depending on the lighting technique
+	unsigned char GetBrightnessAtPoint(int x, int z)
+	{
+		switch (lightingType) {
+		case HEIGHT_BASED:
+			return GetTrueHeightAtPoint(x, z);
+		case LIGHTMAP:
+		case SLOPE_LIGHT:
+			return lightmap.data ? lightmap.data[(z * lightmap.size) + x] : 255;
+		default:
+			return 255;
+		}
+	}
+
 	int GetNumVertsPerFrame(void) { return vertsPerFrame; }
 	int GetNumTrisPerFrame(void) { return trisPerFrame; }
 
@@ -153,6 +216,17 @@ public:
 		multitexture = false;
 		multitexturePass = false;
 		repeatDetailMap = 0;
+		lightingType = LIGHTING_NONE;
+		lightmap.data = NULL;
+		lightmap.size = 0;
+		lightColor[0] = 1.0f;
+		lightColor[1] = 1.0f;
+		lightColor[2] = 1.0f;
+		minBrightness = 0.0f;
+		maxBrightness = 1.0f;
+		lightSoftness = 1.0f;
+		directionX = 0;
+		directionZ = 0;
 	}
 	~Terrain(void) {}
 };
