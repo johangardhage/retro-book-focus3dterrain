@@ -123,6 +123,8 @@ public:
 	void Update(void);
 	void Render(void);
 
+	void SetMaxTrisPerFrame(int numTris) { maxTris = numTris; }
+
 	RoamSplitMerge(void)
 	{
 		camera = NULL;

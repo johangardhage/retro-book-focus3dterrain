@@ -37,6 +37,8 @@ private:
 	int maxLOD;
 	int patchesPerFrame;
 
+	float fogDepth;		// Volumetric fog depth (0 = no per-vertex fog)
+
 	void RenderVertex(float x, float z, float u, float v);
 	void RenderFan(float cX, float cZ, float size, GeoMMNeighbor neighbor, float texRepeat);
 	void RenderPatch(int PX, int PZ, float texRepeat);
@@ -48,6 +50,8 @@ public:
 	void Update(RETRO_Camera *camera, bool cullPatches = false);
 	void Render(void);
 
+	void SetFogDepth(float depth) { fogDepth = depth; }
+
 	int GetNumPatchesPerFrame(void) { return patchesPerFrame; }
 	int GetPatchNumber(int PX, int PZ) { return ((PZ * numPatchesPerSide) + PX); }
 
@@ -58,6 +62,7 @@ public:
 		numPatchesPerSide = 0;
 		maxLOD = 0;
 		patchesPerFrame = 0;
+		fogDepth = 0.0f;
 	}
 	~GeoMipMapping(void) {}
 };

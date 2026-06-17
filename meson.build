@@ -36,6 +36,19 @@ demos = {
   'demo7_2': ['src/demo7_2.cpp', 'src/lib/terrain.cpp', 'src/lib/roamfrustum.cpp', 'src/lib/image.cpp'],
   'demo7_3': ['src/demo7_3.cpp', 'src/lib/terrain.cpp', 'src/lib/roamdiamond.cpp', 'src/lib/image.cpp'],
   'demo7_4': ['src/demo7_4.cpp', 'src/lib/terrain.cpp', 'src/lib/roamsplitmerge.cpp', 'src/lib/image.cpp'],
+  'demo8_1': ['src/demo8_1.cpp', 'src/lib/terrain.cpp', 'src/lib/roamsplitmerge.cpp', 'src/lib/water.cpp', 'src/lib/image.cpp'],
+  'demo8_2': ['src/demo8_2.cpp', 'src/lib/terrain.cpp', 'src/lib/roamsplitmerge.cpp', 'src/lib/watersim.cpp', 'src/lib/image.cpp'],
+  'demo8_3': ['src/demo8_3.cpp', 'src/lib/terrain.cpp', 'src/lib/roamsplitmerge.cpp', 'src/lib/watersim.cpp', 'src/lib/skybox.cpp', 'src/lib/image.cpp'],
+  'demo8_4': ['src/demo8_4.cpp', 'src/lib/terrain.cpp', 'src/lib/roamsplitmerge.cpp', 'src/lib/watersim.cpp', 'src/lib/skydome.cpp', 'src/lib/image.cpp'],
+  'demo8_5': ['src/demo8_5.cpp', 'src/lib/terrain.cpp', 'src/lib/roamsplitmerge.cpp', 'src/lib/watersim.cpp', 'src/lib/skydome.cpp', 'src/lib/image.cpp'],
+  'demo8_6': ['src/demo8_6.cpp', 'src/lib/terrain.cpp', 'src/lib/roamsplitmerge.cpp', 'src/lib/watersim.cpp', 'src/lib/skydome.cpp', 'src/lib/image.cpp'],
+  'demo8_7': ['src/demo8_7.cpp', 'src/lib/terrain.cpp', 'src/lib/roamsplitmerge.cpp', 'src/lib/watersim.cpp', 'src/lib/skydome.cpp', 'src/lib/image.cpp'],
+  'demo8_8a': ['src/demo8_8a.cpp', 'src/lib/terrain.cpp', 'src/lib/geomipmapping.cpp', 'src/lib/watersim.cpp', 'src/lib/skydome.cpp', 'src/lib/image.cpp'],
+  'demo8_8b': ['src/demo8_8b.cpp', 'src/lib/terrain.cpp', 'src/lib/geomipmapping.cpp', 'src/lib/watersim.cpp', 'src/lib/skydome.cpp', 'src/lib/image.cpp'],
+  'demo8_9': ['src/demo8_9.cpp', 'src/lib/particle.cpp'],
+  'demo8_10': ['src/demo8_10.cpp', 'src/lib/particlesystem.cpp', 'src/lib/image.cpp'],
+  'demo8_11': ['src/demo8_11.cpp', 'src/lib/particlesystem.cpp', 'src/lib/image.cpp'],
+  'demo8_12': ['src/demo8_12.cpp', 'src/lib/terrain.cpp', 'src/lib/geomipmapping.cpp', 'src/lib/watersim.cpp', 'src/lib/skydome.cpp', 'src/lib/particlesystem.cpp', 'src/lib/image.cpp'],
 }
 
 foreach name, sources : demos

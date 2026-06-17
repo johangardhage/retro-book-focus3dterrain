@@ -196,7 +196,16 @@ void GeoMipMapping::RenderVertex(float x, float z, float u, float v)
 
 	EmitTexCoord(u, v);
 
-	glVertex3f(x * scale[0], GetScaledHeightAtPoint((int)x, (int)z), z * scale[2]);
+	float height = GetScaledHeightAtPoint((int)x, (int)z);
+
+	// Per-vertex (volumetric) fog coordinate: vertices below the fog depth get
+	// progressively more fog. Only used when a fog depth has been set.
+	if (fogDepth > 0) {
+		float fogY = (height > fogDepth) ? 0 : -(height - fogDepth);
+		glFogCoordf(fogY);
+	}
+
+	glVertex3f(x * scale[0], height, z * scale[2]);
 
 	vertsPerFrame++;
 }
