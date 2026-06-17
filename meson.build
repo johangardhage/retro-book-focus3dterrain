@@ -19,6 +19,8 @@ endif
 
 demos = {
   'demo1_1': ['src/demo1_1.cpp', 'src/lib/roam.cpp'],
+  'demo2_1': ['src/demo2_1.cpp', 'src/lib/terrain.cpp', 'src/lib/bruteforce.cpp'],
+  'demo2_2': ['src/demo2_2.cpp', 'src/lib/terrain.cpp', 'src/lib/bruteforce.cpp'],
 }
 
 foreach name, sources : demos
