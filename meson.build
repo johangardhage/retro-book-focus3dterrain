@@ -19,8 +19,11 @@ endif
 
 demos = {
   'demo1_1': ['src/demo1_1.cpp', 'src/lib/roam.cpp'],
-  'demo2_1': ['src/demo2_1.cpp', 'src/lib/terrain.cpp', 'src/lib/bruteforce.cpp'],
-  'demo2_2': ['src/demo2_2.cpp', 'src/lib/terrain.cpp', 'src/lib/bruteforce.cpp'],
+  'demo2_1': ['src/demo2_1.cpp', 'src/lib/terrain.cpp', 'src/lib/bruteforce.cpp', 'src/lib/image.cpp'],
+  'demo2_2': ['src/demo2_2.cpp', 'src/lib/terrain.cpp', 'src/lib/bruteforce.cpp', 'src/lib/image.cpp'],
+  'demo3_1': ['src/demo3_1.cpp', 'src/lib/terrain.cpp', 'src/lib/bruteforce.cpp', 'src/lib/image.cpp'],
+  'demo3_2': ['src/demo3_2.cpp', 'src/lib/terrain.cpp', 'src/lib/bruteforce.cpp', 'src/lib/image.cpp'],
+  'demo3_3': ['src/demo3_3.cpp', 'src/lib/terrain.cpp', 'src/lib/bruteforce.cpp', 'src/lib/image.cpp'],
 }
 
 foreach name, sources : demos

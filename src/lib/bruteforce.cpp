@@ -2,12 +2,60 @@
 // Focus on 3D Terrain Programming
 //
 // A brute force terrain implementation: render the entire height field as
-// triangle strips, with height-based grayscale coloring.
+// triangle strips. Supports height-based grayscale coloring (when no texture
+// is active), a stretched color texture, and an optional detail-map pass.
 //
 // Original coders: Trent Polack (trent@voxelsoft.com)
 //
 #include "retrogl.h"
 #include "bruteforce.h"
+
+//
+// Render the height field as triangle strips. If grayscale is true, vertices
+// are colored by height and no texture coordinates are emitted; otherwise the
+// vertices are white with texture coordinates scaled by texRepeat.
+//
+void BruteForce::RenderStrips(bool grayscale, float texRepeat)
+{
+	for (int z = 0; z < size - 1; z++) {
+		glBegin(GL_TRIANGLE_STRIP);
+
+		for (int x = 0; x < size - 1; x++) {
+			float texLeft = (float)x / size;
+			float texBottom = (float)z / size;
+			float texTop = (float)(z + 1) / size;
+
+			if (grayscale) {
+				unsigned char color = GetTrueHeightAtPoint(x, z);
+				glColor3ub(color, color, color);
+			} else {
+				glColor3ub(255, 255, 255);
+				EmitTexCoord(texLeft * texRepeat, texBottom * texRepeat);
+			}
+			glVertex3f((float)x, GetScaledHeightAtPoint(x, z), (float)z);
+
+			if (grayscale) {
+				unsigned char color = GetTrueHeightAtPoint(x, z + 1);
+				glColor3ub(color, color, color);
+			} else {
+				glColor3ub(255, 255, 255);
+				EmitTexCoord(texLeft * texRepeat, texTop * texRepeat);
+			}
+			glVertex3f((float)x, GetScaledHeightAtPoint(x, z + 1), (float)z + 1);
+
+			// Increase the vertex count by two
+			vertsPerFrame += 2;
+
+			// No triangles are rendered on the first X-loop, they just start
+			// the triangle strip off
+			if (x != 0) {
+				trisPerFrame += 2;
+			}
+		}
+
+		glEnd();
+	}
+}
 
 //
 // Render the terrain height field
@@ -21,34 +69,44 @@ void BruteForce::Render(void)
 	// Cull non camera-facing polygons
 	glEnable(GL_CULL_FACE);
 
-	// Loop through the Z-axis of the terrain
-	for (int z = 0; z < size - 1; z++) {
-		// Begin a new triangle strip
-		glBegin(GL_TRIANGLE_STRIP);
+	bool doTexture = textureMapping && texture.IsLoaded();
+	bool doDetail = detailMapping && detailMap.IsLoaded();
 
-		// Loop through the X-axis of the terrain.
-		// This is where the triangle strip is constructed.
-		for (int x = 0; x < size - 1; x++) {
-			// Use height-based coloring (high points are light, low points dark)
-			unsigned char color = GetTrueHeightAtPoint(x, z);
-			glColor3ub(color, color, color);
-			glVertex3f((float)x, GetScaledHeightAtPoint(x, z), (float)z);
+	// No texturing: fall back to height-based grayscale coloring
+	if (!doTexture && !doDetail) {
+		glDisable(GL_TEXTURE_2D);
+		RenderStrips(true, 1.0f);
+		return;
+	}
 
-			color = GetTrueHeightAtPoint(x, z + 1);
-			glColor3ub(color, color, color);
-			glVertex3f((float)x, GetScaledHeightAtPoint(x, z + 1), (float)z + 1);
+	// Single-pass ARB multitexturing: color map * detail map at once
+	if (multitexture && doTexture && doDetail) {
+		BeginMultitexture();
+		RenderStrips(false, 1.0f);
+		EndMultitexture();
+		return;
+	}
 
-			// Increase the vertex count by two
-			vertsPerFrame += 2;
+	// Color texture pass
+	if (doTexture) {
+		glEnable(GL_TEXTURE_2D);
+		glBindTexture(GL_TEXTURE_2D, texture.GetID());
+		RenderStrips(false, 1.0f);
+	}
 
-			// No triangles are rendered on the first X-loop, they just start
-			// the triangle strip off
-			if (x != 0) {
-				trisPerFrame += 2;
-			}
+	// Detail map pass (multiplies the detail map onto the color pass)
+	if (doDetail) {
+		glEnable(GL_TEXTURE_2D);
+		glBindTexture(GL_TEXTURE_2D, detailMap.GetID());
+
+		// Only blend if a color pass was made underneath
+		if (doTexture) {
+			glEnable(GL_BLEND);
+			glBlendFunc(GL_ZERO, GL_SRC_COLOR);
 		}
 
-		// End the triangle strip
-		glEnd();
+		RenderStrips(false, (float)repeatDetailMap);
+
+		glDisable(GL_BLEND);
 	}
 }

@@ -12,6 +12,9 @@
 
 class BruteForce : public Terrain
 {
+private:
+	void RenderStrips(bool grayscale, float texRepeat);
+
 public:
 	void Render(void);
 

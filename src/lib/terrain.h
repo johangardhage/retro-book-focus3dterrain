@@ -2,7 +2,8 @@
 // Focus on 3D Terrain Programming
 //
 // Abstract terrain base class. All specific implementations are derived from
-// it. Contains heightmap loading/saving and fractal terrain generation.
+// it. Contains heightmap loading/saving, fractal terrain generation, texture
+// mapping, texture-map generation from tiles, and detail mapping.
 //
 // Original coders: Trent Polack (trent@voxelsoft.com)
 //
@@ -10,11 +11,36 @@
 #define _TERRAIN_H_
 
 #include <stdlib.h> // rand, RAND_MAX
+#include "image.h"
+
+#define NUM_TILES 5
+
+enum TileType
+{
+	LOWEST_TILE = 0,	// Sand, dirt, etc.
+	LOW_TILE,			// Grass
+	HIGH_TILE,			// Mountainside
+	HIGHEST_TILE		// Tip of mountain
+};
 
 struct HeightData
 {
 	unsigned char *data;	// The height data
 	int size;				// The height size (must be a power of 2)
+};
+
+struct TextureRegion
+{
+	int lowHeight;			// Lowest possible height (0%)
+	int optimalHeight;		// Optimal height (100%)
+	int highHeight;			// Highest possible height (0%)
+};
+
+struct TextureTiles
+{
+	TextureRegion regions[NUM_TILES];	// Texture regions
+	Image tiles[NUM_TILES];				// Texture tiles
+	int numTiles;
 };
 
 class Terrain
@@ -24,6 +50,16 @@ protected:
 
 	float heightScale;		// Scaling variable
 
+	// Texture information
+	TextureTiles tiles;
+	Image texture;
+	Image detailMap;
+	int repeatDetailMap;
+	bool multitexture;
+	bool textureMapping;
+	bool detailMapping;
+	bool multitexturePass;	// True only while emitting the single ARB multitexture pass
+
 	int vertsPerFrame;		// Stat variables
 	int trisPerFrame;
 
@@ -31,6 +67,16 @@ protected:
 	void NormalizeTerrain(float *heightData);
 	void FilterHeightBand(float *band, int stride, int count, float filter);
 	void FilterHeightField(float *heightData, float filter);
+
+	// Texture map generation helpers
+	float RegionPercent(int tileType, unsigned char height);
+	void GetTexCoords(Image *texture, unsigned int *x, unsigned int *y);
+	unsigned char InterpolateHeight(int x, int z, float heightToTexRatio);
+
+	// ARB multitexture rendering helpers (color map on unit 0, detail on unit 1)
+	void BeginMultitexture(void);
+	void EndMultitexture(void);
+	void EmitTexCoord(float u, float v);
 
 public:
 	int size;	// The size of the heightmap, must be a power of two
@@ -43,6 +89,33 @@ public:
 
 	bool MakeTerrainFault(int size, int iterations, int minDelta, int maxDelta, float filter);
 	bool MakeTerrainPlasma(int size, float roughness);
+
+	// Texture mapping
+	bool LoadTexture(const char *filename);
+	void UnloadTexture(void) { texture.Unload(); }
+	void DoTextureMapping(bool doIt) { textureMapping = doIt; }
+
+	// Texture map generation from tiles
+	void GenerateTextureMap(unsigned int size);
+	bool LoadTile(TileType tileType, const char *filename) { return tiles.tiles[tileType].LoadData(filename); }
+	void UnloadTile(TileType tileType) { tiles.tiles[tileType].Unload(); }
+	void UnloadAllTiles(void)
+	{
+		UnloadTile(LOWEST_TILE);
+		UnloadTile(LOW_TILE);
+		UnloadTile(HIGH_TILE);
+		UnloadTile(HIGHEST_TILE);
+	}
+
+	// Detail mapping
+	bool LoadDetailMap(const char *filename);
+	void UnloadDetailMap(void) { detailMap.Unload(); }
+	void DoDetailMapping(bool doIt, int repeatNum = 0)
+	{
+		detailMapping = doIt;
+		repeatDetailMap = repeatNum;
+	}
+	void DoMultitexturing(bool doIt) { multitexture = doIt; }
 
 	int GetNumVertsPerFrame(void) { return vertsPerFrame; }
 	int GetNumTrisPerFrame(void) { return trisPerFrame; }
@@ -70,7 +143,17 @@ public:
 		return ((float)(heightData.data[(z * size) + x]) * heightScale);
 	}
 
-	Terrain(void) { heightData.data = NULL; size = 0; heightScale = 1.0f; }
+	Terrain(void)
+	{
+		heightData.data = NULL;
+		size = 0;
+		heightScale = 1.0f;
+		textureMapping = false;
+		detailMapping = false;
+		multitexture = false;
+		multitexturePass = false;
+		repeatDetailMap = 0;
+	}
 	~Terrain(void) {}
 };
 

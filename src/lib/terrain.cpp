@@ -13,6 +13,57 @@
 #include "terrain.h"
 
 //
+// ARB multitexturing: render the color map (unit 0) and detail map (unit 1) in
+// a single pass, combined with a 2x RGB scale to compensate for the detail
+// map's midtone average. Matches the book's hardware multitexturing path.
+//
+void Terrain::BeginMultitexture(void)
+{
+	glDisable(GL_BLEND);
+
+	// Color texture on the first texture unit
+	glActiveTextureARB(GL_TEXTURE0_ARB);
+	glEnable(GL_TEXTURE_2D);
+	glBindTexture(GL_TEXTURE_2D, texture.GetID());
+
+	// Detail texture on the second texture unit, modulated x2 onto the color
+	glActiveTextureARB(GL_TEXTURE1_ARB);
+	glEnable(GL_TEXTURE_2D);
+	glBindTexture(GL_TEXTURE_2D, detailMap.GetID());
+	glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_COMBINE_ARB);
+	glTexEnvi(GL_TEXTURE_ENV, GL_RGB_SCALE_ARB, 2);
+
+	multitexturePass = true;
+}
+
+void Terrain::EndMultitexture(void)
+{
+	multitexturePass = false;
+
+	// Unbind the second texture unit
+	glActiveTextureARB(GL_TEXTURE1_ARB);
+	glDisable(GL_TEXTURE_2D);
+	glBindTexture(GL_TEXTURE_2D, 0);
+
+	// Leave the first texture unit active
+	glActiveTextureARB(GL_TEXTURE0_ARB);
+	glDisable(GL_TEXTURE_2D);
+	glBindTexture(GL_TEXTURE_2D, 0);
+}
+
+//
+// Emit a texture coordinate to unit 0, and (during the multitexture pass) to
+// unit 1 scaled up by the detail-map repeat factor.
+//
+void Terrain::EmitTexCoord(float u, float v)
+{
+	glMultiTexCoord2fARB(GL_TEXTURE0_ARB, u, v);
+	if (multitexturePass) {
+		glMultiTexCoord2fARB(GL_TEXTURE1_ARB, u * repeatDetailMap, v * repeatDetailMap);
+	}
+}
+
+//
 // Load a grayscale RAW height map
 //
 bool Terrain::LoadHeightMap(const char *filename, int mapSize)
@@ -331,4 +382,221 @@ bool Terrain::MakeTerrainPlasma(int mapSize, float roughness)
 	delete[] tempBuffer;
 
 	return true;
+}
+
+//
+// Load a texture that will be stretched over the landscape
+//
+bool Terrain::LoadTexture(const char *filename)
+{
+	return texture.Load(filename, GL_LINEAR_MIPMAP_LINEAR, GL_LINEAR, true);
+}
+
+//
+// Load a detail map to add realism to the terrain
+//
+bool Terrain::LoadDetailMap(const char *filename)
+{
+	return detailMap.Load(filename, GL_LINEAR_MIPMAP_LINEAR, GL_LINEAR, true);
+}
+
+//
+// Get the percentage of which a texture tile should be visible at a given height
+//
+float Terrain::RegionPercent(int tileType, unsigned char height)
+{
+	// If the height is lower than the lowest tile's height, then we want full
+	// brightness; otherwise the area will get darkened, showing no texture
+	if (tiles.tiles[LOWEST_TILE].IsLoaded()) {
+		if (tileType == LOWEST_TILE && height < tiles.regions[LOWEST_TILE].optimalHeight) {
+			return 1.0f;
+		}
+	} else if (tiles.tiles[LOW_TILE].IsLoaded()) {
+		if (tileType == LOW_TILE && height < tiles.regions[LOW_TILE].optimalHeight) {
+			return 1.0f;
+		}
+	} else if (tiles.tiles[HIGH_TILE].IsLoaded()) {
+		if (tileType == HIGH_TILE && height < tiles.regions[HIGH_TILE].optimalHeight) {
+			return 1.0f;
+		}
+	} else if (tiles.tiles[HIGHEST_TILE].IsLoaded()) {
+		if (tileType == HIGHEST_TILE && height < tiles.regions[HIGHEST_TILE].optimalHeight) {
+			return 1.0f;
+		}
+	}
+
+	// Height is outside the region's boundaries
+	if (height < tiles.regions[tileType].lowHeight) {
+		return 0.0f;
+	} else if (height > tiles.regions[tileType].highHeight) {
+		return 0.0f;
+	}
+
+	// Height is below the optimum height
+	if (height < tiles.regions[tileType].optimalHeight) {
+		float temp1 = (float)height - tiles.regions[tileType].lowHeight;
+		float temp2 = (float)tiles.regions[tileType].optimalHeight - tiles.regions[tileType].lowHeight;
+		return (temp1 / temp2);
+	}
+
+	// Height is exactly the optimal height
+	else if (height == tiles.regions[tileType].optimalHeight) {
+		return 1.0f;
+	}
+
+	// Height is above the optimal height
+	else if (height > tiles.regions[tileType].optimalHeight) {
+		float temp1 = (float)tiles.regions[tileType].highHeight - tiles.regions[tileType].optimalHeight;
+		return ((temp1 - (height - tiles.regions[tileType].optimalHeight)) / temp1);
+	}
+
+	return 0.0f;
+}
+
+//
+// Get the (wrapped) texture coordinates for a tile of the given size
+//
+void Terrain::GetTexCoords(Image *texture, unsigned int *x, unsigned int *y)
+{
+	unsigned int width = texture->GetWidth();
+	unsigned int height = texture->GetHeight();
+	int repeatX = -1;
+	int repeatY = -1;
+	int i = 0;
+
+	// Figure out how many times the tile has repeated (on the X axis)
+	while (repeatX == -1) {
+		i++;
+		if (*x < (width * i)) {
+			repeatX = i - 1;
+		}
+	}
+
+	i = 0;
+
+	// Figure out how many times the tile has repeated (on the Y axis)
+	while (repeatY == -1) {
+		i++;
+		if (*y < (height * i)) {
+			repeatY = i - 1;
+		}
+	}
+
+	// Update the given texture coordinates
+	*x = *x - (width * repeatX);
+	*y = *y - (height * repeatY);
+}
+
+//
+// Interpolate heights so that the generated texture map does not look blocky
+//
+unsigned char Terrain::InterpolateHeight(int x, int z, float heightToTexRatio)
+{
+	unsigned char low, highX, highZ;
+	float interpolation;
+	float scaledX = x * heightToTexRatio;
+	float scaledZ = z * heightToTexRatio;
+
+	// Set the middle boundary
+	low = GetTrueHeightAtPoint((int)scaledX, (int)scaledZ);
+
+	// Interpolate along the X axis
+	if ((scaledX + 1) > size) {
+		return low;
+	} else {
+		highX = GetTrueHeightAtPoint((int)scaledX + 1, (int)scaledZ);
+	}
+	interpolation = (scaledX - (int)scaledX);
+	float interpX = ((highX - low) * interpolation) + low;
+
+	// Interpolate along the Z axis
+	if ((scaledZ + 1) > size) {
+		return low;
+	} else {
+		highZ = GetTrueHeightAtPoint((int)scaledX, (int)scaledZ + 1);
+	}
+	interpolation = (scaledZ - (int)scaledZ);
+	float interpZ = ((highZ - low) * interpolation) + low;
+
+	// Average of the two interpolated values
+	return ((unsigned char)((interpX + interpZ) / 2));
+}
+
+//
+// Generate a texture map from the loaded tiles
+//
+void Terrain::GenerateTextureMap(unsigned int textureSize)
+{
+	unsigned char red, green, blue;
+
+	// Find out the number of tiles that we have
+	tiles.numTiles = 0;
+	for (int i = 0; i < NUM_TILES; i++) {
+		if (tiles.tiles[i].IsLoaded()) {
+			tiles.numTiles++;
+		}
+	}
+
+	// Calculate the texture regions
+	int lastHeight = -1;
+	for (int i = 0; i < NUM_TILES; i++) {
+		if (tiles.tiles[i].IsLoaded()) {
+			// Calculate the three height boundaries
+			tiles.regions[i].lowHeight = lastHeight + 1;
+			lastHeight += 255 / tiles.numTiles;
+
+			tiles.regions[i].optimalHeight = lastHeight;
+			tiles.regions[i].highHeight = (lastHeight - tiles.regions[i].lowHeight) + lastHeight;
+		}
+	}
+
+	// Create room for a new texture
+	texture.Create(textureSize, textureSize, 24);
+
+	// Get the height-map-to-texture-map ratio
+	float mapRatio = (float)size / textureSize;
+
+	// Create the texture data
+	for (unsigned int z = 0; z < textureSize; z++) {
+		for (unsigned int x = 0; x < textureSize; x++) {
+			float totalRed = 0.0f;
+			float totalGreen = 0.0f;
+			float totalBlue = 0.0f;
+
+			// Loop through the tiles
+			for (int i = 0; i < NUM_TILES; i++) {
+				if (tiles.tiles[i].IsLoaded()) {
+					unsigned int texX = x;
+					unsigned int texZ = z;
+
+					// Get texture coordinates
+					GetTexCoords(&tiles.tiles[i], &texX, &texZ);
+
+					// Get the current color in the tile at those coordinates
+					tiles.tiles[i].GetColor(texX, texZ, &red, &green, &blue);
+
+					// Get the blending percentage for this tile at this height
+					float blend = RegionPercent(i, InterpolateHeight(x, z, mapRatio));
+
+					// Accumulate the RGB values
+					totalRed += red * blend;
+					totalGreen += green * blend;
+					totalBlue += blue * blend;
+				}
+			}
+
+			// Set the final color in the generated texture
+			texture.SetColor(x, z, (unsigned char)totalRed, (unsigned char)totalGreen, (unsigned char)totalBlue);
+		}
+	}
+
+	// Build the OpenGL texture
+	unsigned int tempID;
+	glGenTextures(1, &tempID);
+	glBindTexture(GL_TEXTURE_2D, tempID);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, textureSize, textureSize, 0, GL_RGB, GL_UNSIGNED_BYTE, texture.GetData());
+
+	texture.SetID(tempID);
 }
