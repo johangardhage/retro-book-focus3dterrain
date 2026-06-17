@@ -32,6 +32,10 @@ demos = {
   'demo6_1': ['src/demo6_1.cpp', 'src/lib/terrain.cpp', 'src/lib/quadtree.cpp', 'src/lib/image.cpp'],
   'demo6_2': ['src/demo6_2.cpp', 'src/lib/terrain.cpp', 'src/lib/quadtree.cpp', 'src/lib/image.cpp'],
   'demo6_3': ['src/demo6_3.cpp', 'src/lib/terrain.cpp', 'src/lib/quadtree.cpp', 'src/lib/image.cpp'],
+  'demo7_1': ['src/demo7_1.cpp', 'src/lib/roamlod.cpp', 'src/lib/terrain.cpp', 'src/lib/image.cpp'],
+  'demo7_2': ['src/demo7_2.cpp', 'src/lib/terrain.cpp', 'src/lib/roamfrustum.cpp', 'src/lib/image.cpp'],
+  'demo7_3': ['src/demo7_3.cpp', 'src/lib/terrain.cpp', 'src/lib/roamdiamond.cpp', 'src/lib/image.cpp'],
+  'demo7_4': ['src/demo7_4.cpp', 'src/lib/terrain.cpp', 'src/lib/roamsplitmerge.cpp', 'src/lib/image.cpp'],
 }
 
 foreach name, sources : demos
