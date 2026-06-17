@@ -18,6 +18,7 @@ else
 endif
 
 demos = {
+  'demo1_1': ['src/demo1_1.cpp', 'src/lib/roam.cpp'],
 }
 
 foreach name, sources : demos
