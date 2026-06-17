@@ -62,7 +62,7 @@ class Terrain
 protected:
 	HeightData heightData;	// The height data
 
-	float heightScale;		// Scaling variable
+	float scale[3];			// Scaling vector (width, height, depth)
 
 	// Texture information
 	TextureTiles tiles;
@@ -189,7 +189,17 @@ public:
 		return (f1 + (f2 - f1) * ((float)rand()) / ((float)RAND_MAX));
 	}
 
-	void SetHeightScale(float scale) { heightScale = scale; }
+	// Set just the height (Y) scale
+	void SetHeightScale(float s) { scale[1] = s; }
+
+	// Set the width/height/depth scale of the terrain
+	void Scale(float x, float y, float z)
+	{
+		scale[0] = x;
+		scale[1] = y;
+		scale[2] = z;
+	}
+	float *GetScale(void) { return scale; }
 
 	void SetHeightAtPoint(unsigned char height, int x, int z)
 	{
@@ -203,14 +213,16 @@ public:
 
 	float GetScaledHeightAtPoint(int x, int z)
 	{
-		return ((float)(heightData.data[(z * size) + x]) * heightScale);
+		return ((float)(heightData.data[(z * size) + x]) * scale[1]);
 	}
 
 	Terrain(void)
 	{
 		heightData.data = NULL;
 		size = 0;
-		heightScale = 1.0f;
+		scale[0] = 1.0f;
+		scale[1] = 1.0f;
+		scale[2] = 1.0f;
 		textureMapping = false;
 		detailMapping = false;
 		multitexture = false;

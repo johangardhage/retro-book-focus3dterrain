@@ -27,6 +27,8 @@ demos = {
   'demo4_1': ['src/demo4_1.cpp', 'src/lib/terrain.cpp', 'src/lib/bruteforce.cpp', 'src/lib/image.cpp'],
   'demo4_2': ['src/demo4_2.cpp', 'src/lib/terrain.cpp', 'src/lib/bruteforce.cpp', 'src/lib/image.cpp'],
   'demo4_3': ['src/demo4_3.cpp', 'src/lib/terrain.cpp', 'src/lib/bruteforce.cpp', 'src/lib/image.cpp'],
+  'demo5_1': ['src/demo5_1.cpp', 'src/lib/terrain.cpp', 'src/lib/geomipmapping.cpp', 'src/lib/image.cpp'],
+  'demo5_2': ['src/demo5_2.cpp', 'src/lib/terrain.cpp', 'src/lib/geomipmapping.cpp', 'src/lib/image.cpp'],
 }
 
 foreach name, sources : demos
